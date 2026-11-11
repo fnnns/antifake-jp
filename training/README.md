@@ -1,6 +1,6 @@
 # 日本語話者エンコーダーの追加学習
 
-このフォルダーは、JVS 形式の通常読み上げ音声で RTVC 話者エンコーダーを追加学習するためのコードです。過去の重み、学習結果、スコア、ログは含めません。
+このフォルダーは、JVS 形式の通常読み上げ音声で RTVC 話者エンコーダーを追加学習するためのコードです。録音の保護だけなら、`models/` に同梱した日本語モデルを利用でき、追加学習は不要です。過去の学習・評価レポート、スコア、ログは含めません。
 
 ## 基本の流れ
 
@@ -26,7 +26,7 @@ GPU 版のセットアップ後、ルートの `学習を実行.cmd` を実行�
 ```powershell
 .\.venv\Scripts\python.exe training/pipeline.py preprocess --archive "C:\datasets\jvs_ver1.zip" --out training/data
 .\.venv\Scripts\python.exe training/pipeline.py train --data training/data --pretrained models/encoder.pt --run-dir training/runs/my_run --steps 3000 --eval-every 500 --patience 3 --min-steps 1000 --speakers 8 --utterances 5 --lr 0.00001 --device cuda
-.\.venv\Scripts\python.exe training/register_model.py --run-dir training/runs/my_run --output-name encoder_ja.pt
+.\.venv\Scripts\python.exe training/register_model.py --run-dir training/runs/my_run --output-name encoder_ja_custom.pt
 ```
 
 登録後は、画面の「日本語で微調整したモデル」で選べます。`--activate` を登録コマンドに追加すると、自動選択もそのモデルになります。
