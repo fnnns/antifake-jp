@@ -61,6 +61,8 @@ try {
     @{ python = $runtimePython } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $PSScriptRoot 'runtime.local.json') -Encoding UTF8
     & $runtimePython (Join-Path $PSScriptRoot 'models\download_model.py')
     if ($LASTEXITCODE -ne 0) { throw 'モデルを取得できませんでした。モデル取得.cmd で再試行できます。' }
+    & $runtimePython -X utf8 (Join-Path $PSScriptRoot 'models\verify_models.py')
+    if ($LASTEXITCODE -ne 0) { throw '同梱モデルを確認できません。GitHub から全ファイルを取得し直してください。' }
     & (Join-Path $PSScriptRoot 'start.ps1') -CheckOnly
     if ($LASTEXITCODE -ne 0) { throw '起動確認に失敗しました。表示されたメッセージを確認してください。' }
     Write-Host '準備ができました。start.cmd をダブルクリックして起動してください。' -ForegroundColor Green

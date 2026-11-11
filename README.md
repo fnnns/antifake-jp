@@ -4,7 +4,15 @@
 
 AntiFake の考え方を参考にした、RTVC 単一エンコーダーによる独自の簡略実装です。原論文のアンサンブル、参考話者選択、知覚損失を完全再現したものではありません。クローン防御効果を保証する製品ではありません。
 
-**このリポジトリはソースコードのみを公開します。学習済み重み、学習結果、評価スコア、録音、生成音声、データセット、実行ログは含めません。** 日本語モデルは、利用条件を確認したデータで各自が追加学習して用意してください。
+**実行に必要な原版モデル・日本語追加学習モデルの重みと登録設定を同梱しています。保護処理を使うために学習し直す必要はありません。** 学習・評価レポート、スコア、録音、生成音声、データセット、実行ログは含めません。
+
+## すぐに使う
+
+1. GitHub の「Code」→「Download ZIP」で取得し、フォルダー全体を展開します。`git clone https://github.com/fnnns/antifake-jp.git` でも取得できます。
+2. Python 3.10～3.12 を用意し、`setup.cmd` を実行して必要なライブラリをインストールします。セットアップは同梱モデルの検証も行います。
+3. `start.cmd` を実行し、「使用するモデル」で「日本語で微調整したモデル」を選びます。録音と保存先を選んで処理を開始してください。
+
+Python とライブラリの初回準備にはインターネット接続が必要です。準備後の録音処理はローカルで行い、学習データの取得は不要です。重みの説明と SHA-256 は [同梱モデル](docs/MODELS.md) にあります。
 
 ## 機能
 
@@ -45,7 +53,7 @@ Python の場所を指定する場合：
 .\setup.cmd -Device CUDA121 -PythonPath "C:\Python312\python.exe"
 ```
 
-専用環境 `.venv` を作成し、必要なライブラリと公開されている元の RTVC モデルを取得します。モデルは保存前・読込前に SHA-256 を確認します。システム全体の Python ライブラリは変更しません。
+専用環境 `.venv` を作成し、必要なライブラリを取得します。同梱した原版・日本語モデルは SHA-256 と読込を確認します。原版がない場合だけ、公開されている元の RTVC モデルを取得します。システム全体の Python ライブラリは変更しません。
 
 ## 録音を処理する
 
@@ -53,30 +61,30 @@ Python の場所を指定する場合：
 
 1. 「保護する録音」を選びます。最初は一人で話した短い日本語録音が適しています。
 2. 出力 WAV の保存先を確認します。
-3. 「使用するモデル」を選びます。初回は「原版の事前学習モデル」を使用できます。
+3. 「使用するモデル」で「日本語で微調整したモデル」を選びます。「原版の事前学習モデル」と比較することもできます。
 4. 必要に応じて反復回数・SNR 下限・デバイスを設定します。
 5. 「録音の保護を開始」を押し、処理後に聞こえ方を確認します。
 
-「日本語で微調整したモデル」は、自分で学習して登録した後に使えます。公開ソースには、その学習済み重みを付属していません。
+日本語モデルは登録済みです。「自動」は原版モデルを使う既存の設定を維持しています。日本語モデルを使う場合は、画面または `--model japanese` で明示的に選んでください。
 
 コマンドラインの例：
 
 ```powershell
-.\.venv\Scripts\python.exe cli.py input.wav output.wav --model original --device auto --iterations 150 --snr 30
+.\.venv\Scripts\python.exe cli.py input.wav output.wav --model japanese --device auto --iterations 150 --snr 30
 ```
 
 処理できる長さは 0.5 秒～5 分です。出力は 16 kHz・モノラルになるため、元の高音域・ステレオ情報を含むファイルは保存しておいてください。SNR は波形の変化量を表す指標で、聞きやすさや防御効果を直接保証しません。
 
 ## 日本語モデルを追加学習する
 
-GPU 版セットアップ後に `学習を実行.cmd` を実行できます。データがない場合は取得し、前処理、追加学習、推論用モデルの登録を順に行います。学習データの取得元と利用条件を、先に [データについて](docs/DATA.md) で確認してください。
+ここからは、自分で追加学習し直す場合だけの手順です。同梱モデルで録音を処理するだけなら不要です。GPU 版セットアップ後に `学習を実行.cmd` を実行できます。データがない場合は取得し、前処理、追加学習、推論用モデルの登録を順に行います。学習データの取得元と利用条件を、先に [データについて](docs/DATA.md) で確認してください。
 
 手動で実行する例：
 
 ```powershell
 .\.venv\Scripts\python.exe training/pipeline.py preprocess --archive "C:\datasets\jvs_ver1.zip" --out training/data
 .\.venv\Scripts\python.exe training/pipeline.py train --data training/data --pretrained models/encoder.pt --run-dir training/runs/my_run --steps 3000 --eval-every 500 --speakers 8 --utterances 5 --lr 0.00001 --device cuda
-.\.venv\Scripts\python.exe training/register_model.py --run-dir training/runs/my_run --output-name encoder_ja.pt
+.\.venv\Scripts\python.exe training/register_model.py --run-dir training/runs/my_run --output-name encoder_ja_custom.pt
 ```
 
 追加学習は、元の重みを読み込んで新しい Adam を作り、同じ話者の表現を近づけ、異なる話者を区別する GE2E 損失で行います。録音の話者 ID が必要で、文字起こしは学習入力に使いません。前処理は通常の読み上げを対象とし、ささやき声と裏声を除きます。
@@ -90,6 +98,10 @@ app.py                       日本語の操作画面
 cli.py                       コマンドライン
 core.py                      推論構造・摂動の最適化・音声入出力
 models/download_model.py     元のモデルの取得と検証
+models/verify_models.py      同梱した両モデルの検証
+models/encoder.pt            原版の事前学習済み重み
+models/encoder_ja.pt         日本語で追加学習した推論用重み
+models/registry.json         同梱モデルの登録設定
 models/registry.example.json 登録情報のひな形
 training/pipeline.py         前処理・GE2E 追加学習・検証・モデル選択
 training/register_model.py   推論用モデルの検証と登録
@@ -104,6 +116,7 @@ third_party/                 参照元の許諾文
 セットアップ後に、モデル登録情報の確認を実行できます。
 
 ```powershell
+.\.venv\Scripts\python.exe models/verify_models.py
 .\.venv\Scripts\python.exe tests/test_model_registry.py
 ```
 
@@ -117,9 +130,9 @@ GPU 環境では、小規模な合成データで追加学習の流れを確認�
 
 ## 公開対象と生成物
 
-学習や処理によって作られる重み、スコア、レポート、音声は各自の環境へ保存されます。`.gitignore` で生成物を除外しています。公開対象の方針は [公開するファイル](docs/PUBLISHING.md) にあります。
+実行用の固定された 2 個のモデルと登録設定を公開しています。自分で学習や処理を行って作られる追加の重み、スコア、レポート、音声は各自の環境へ保存され、`.gitignore` で除外します。公開対象の方針は [公開するファイル](docs/PUBLISHING.md) にあります。
 
-このリポジトリには過去の学習・評価の結果や、それに依存する検証用ファイルを含めません。実験値を示さず、手順とコードだけを掲載しています。
+日本語モデルには推論に使うテンソルだけを収録し、学習履歴・最適化状態・評価スコアを取り除いています。過去の学習・評価レポートは公開しません。
 
 ## 制限
 

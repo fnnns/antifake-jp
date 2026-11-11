@@ -11,14 +11,15 @@ runtime.local.json
 .env.*
 !.env.example
 
-# 学習済み重み・モデルの実際の登録情報
+# 追加実験の重み・チェックポイント（実行用の固定モデルだけを同梱）
 *.pt
 *.pth
 *.ckpt
 *.onnx
 *.safetensors
 *.bin
-models/registry.json
+!models/encoder.pt
+!models/encoder_ja.pt
 models/*記録*.json
 
 # データ・中間特徴量・録音・生成音声
